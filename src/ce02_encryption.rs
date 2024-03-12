@@ -73,14 +73,31 @@ impl std::fmt::Debug for EncryptedMessage {
 /// This should use the key SYM_KEY. Using GenericArray::from_slice, you can get a generic array
 /// out of an &[u8].
 pub fn encrypt_message_no_aad(msg: &[u8], nonce: &[u8]) -> EncryptedMessage {
-    todo!()
+    // todo!()
+    let key = GenericArray::from_slice(SYM_KEY);
+    let encryption = Aes128GcmSiv::new(key);
+    let nonce = Nonce::from_slice(nonce);
+    let ciphertext = encryption.encrypt(nonce, msg).unwrap();
+
+    EncryptedMessage {
+        ciphertext: ciphertext.to_vec(),
+        nonce: nonce.to_vec(),
+        associated_data: None
+    }
 }
 
 /// Decrypt a message encrypted with AES128-GCM-SIV.
 ///
 /// This should use the key SYM_KEY.
 pub fn decrypt_message_no_aad(msg: EncryptedMessage) -> Result<Vec<u8>, ()> {
-    todo!()
+    // todo!()
+    let key = GenericArray::from_slice(SYM_KEY);
+    let encryption = Aes128GcmSiv::new(key);
+    let nonce = Nonce::from_slice(&msg.nonce);
+    let ciphertext = msg.ciphertext;
+    let decrypt = encryption.decrypt(nonce, &*ciphertext).map_err(|_| ())?;
+
+    Ok(decrypt)
 }
 
 /// Encrypt the BASE_MESSAGE with AES128-GCM-SIV and the nonce in the argument, also including some
@@ -88,14 +105,47 @@ pub fn decrypt_message_no_aad(msg: EncryptedMessage) -> Result<Vec<u8>, ()> {
 ///
 /// This should use the key SYM_KEY.
 pub fn encrypt_message_with_aad(msg: &[u8], nonce: &[u8], aad: &[u8]) -> EncryptedMessage {
-    todo!()
+    // todo!()
+    let key = GenericArray::from_slice(SYM_KEY);
+    let encryption = Aes128GcmSiv::new(key);
+
+    let payload = Payload {
+        msg: &msg,
+        aad: &aad
+    };
+
+    let nonce = Nonce::from_slice(nonce);
+    let ciphertext = encryption.encrypt(nonce, payload).unwrap();
+
+    EncryptedMessage {
+        ciphertext: ciphertext.to_vec(),
+        nonce: nonce.to_vec(),
+        associated_data: Some(aad.to_vec())
+    }
 }
 
 /// Decrypt a message encrypted with AES128-GCM-SIV. The message may have AAD.
 ///
 /// This should use the key SYM_KEY.
 pub fn decrypt_message(msg: EncryptedMessage) -> Result<Vec<u8>, ()> {
-    todo!()
+    // todo!()
+    let key = GenericArray::from_slice(SYM_KEY);
+    let encryption = Aes128GcmSiv::new(key);
+
+    let included_aad = match msg.associated_data {
+        Some(value) => value,
+        None => (&[]).to_vec()
+    };
+
+    let payload = Payload {
+        msg: &msg.ciphertext,
+        aad: &included_aad
+    };
+
+    let nonce = Nonce::from_slice(&msg.nonce);
+    let decrypt = encryption.decrypt(nonce, payload).map_err(|_| ())?;
+
+    Ok(decrypt)
 }
 
 use rand::{rngs::SmallRng, SeedableRng};
@@ -154,7 +204,12 @@ pub fn x25519_public(secret: &StaticSecret) -> X25519PublicKey {
 /// This is implemented by the x25519_dalek_ng crate imported above, which is also what the
 /// methods above are there to help with.
 pub fn calculate_shared_secret(my_pair: Ed25519Pair, their_public: Ed25519Public) -> SharedSecret {
-    todo!()
+    // todo!()
+    let static_secret = sp_core_ed25519_pair_to_x25519_static_secret(my_pair);
+    let x25519_public = sp_core_ed25519_public_to_x25519_public(their_public);
+    let shared_secret = static_secret.diffie_hellman(&x25519_public);
+
+    shared_secret
 }
 
 /// In the next few parts, we will need to generate ephemeral asymmetric key pairs. We will use
@@ -231,6 +286,8 @@ pub fn how_many_hours_did_you_spend_on_this_section() -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use sp_runtime::print;
+
     use super::*;
 
     #[test]
@@ -250,10 +307,13 @@ mod tests {
     #[test]
     fn decrypt_message_no_aad_test() {
         let msg = EncryptedMessage {
-        associated_data: None,
-        ciphertext: hex::decode("190606237a4e03658399bfdf2ba9a60c87b150d450566ca16dca98de3757993b14ad4e2c7f99faba18c6041247d0bb2fb66d096f95c715e9ef").unwrap(),
-        nonce: hex::decode("beefbeefbeefbeefbeefbeef").unwrap(),
-    };
+            associated_data: None,
+            ciphertext: hex::decode("190606237a4e03658399bfdf2ba9a60c87b150d450566ca16dca98de3757993b14ad4e2c7f99faba18c6041247d0bb2fb66d096f95c715e9ef").unwrap(),
+            nonce: hex::decode("beefbeefbeefbeefbeefbeef").unwrap(),
+        };
+
+        println!("Decryption: {:?}", decrypt_message_no_aad(msg.clone()).unwrap());
+        println!("Expect: {:?}", BASE_MESSAGE.to_vec());
 
         assert_eq!(
             decrypt_message_no_aad(msg.clone()),

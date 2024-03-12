@@ -7,6 +7,7 @@ use std::str::FromStr;
 use byteorder::{LittleEndian, ReadBytesExt};
 use hex::ToHex;
 use phf::phf_map;
+use sp_core::crypto::SecretStringError;
 use sp_core::ecdsa::{Pair as ECDSAPair, Public as ECDSAPublic};
 use sp_core::ed25519::{Pair as Ed25519Pair, Public as Ed25519Public};
 use sp_core::sr25519::{Pair as Sr25519Pair, Public as Sr25519Public};
@@ -28,30 +29,50 @@ const SS58_ADDRESS: &str = "5GEkFD1WxzmfasT7yMUERDprkEueFEDrSojE3ajwxXvfYYaF";
 
 /// Generate the sr25519 keypair corresponding to the const bip39 phrase
 pub fn generate_sr25519_pair() -> Sr25519Pair {
-    todo!()
+    // todo!()
+    Sr25519Pair::from_string(BIP39_STR, None).unwrap()
 }
 
 /// Generate the ed25519 keypair corresponding to the const bip39 phrase
 pub fn generate_ed25519_pair() -> Ed25519Pair {
-    todo!()
+    // todo!()
+    Ed25519Pair::from_string(BIP39_STR, None).unwrap()
 }
 
 /// Generate the ecdsa keypair corresponding to the const bip39 phrase
 pub fn generate_ecdsa_pair() -> ECDSAPair {
-    todo!()
+    // todo!()
+    ECDSAPair::from_string(BIP39_STR, None).unwrap()
 }
 
 /// Generate a child keypair of the sr25519 keypair, with the derivation path "children" and
 /// "0", where "children" is a hard derivation, and "0" is soft.
 pub fn generate_derived_addresses_from_sr25519_pair() -> Sr25519Pair {
-    todo!()
+    // todo!()
+    let keypair = generate_sr25519_pair();
+
+    let derivation_path = vec![
+        DeriveJunction::hard("children"),
+        DeriveJunction::soft(0)
+    ];
+
+    keypair.derive(derivation_path.into_iter(), None).unwrap().0
 }
 
 /// Generate a child keypair corresponding to the address passed in. The address is provided in
 /// SS58 format, and the derivation path should be "test_derivation" and "5", with both being
 /// soft derivations.
 pub fn generate_derived_public_from_address(address: &str) -> Sr25519Public {
-    todo!()
+    // todo!()
+    let derivation_path = vec![
+        DeriveJunction::soft("test_derivation"),
+        DeriveJunction::soft(5)
+    ];
+
+    let keypair = Sr25519Public::from_ss58check(address).unwrap();
+    let derive = Derive::derive(&keypair, derivation_path.into_iter());
+
+    derive.unwrap()
 }
 
 /// Generate the substrate test pair corresponding to Alice in sr25519
@@ -61,13 +82,15 @@ pub fn alice_sr25519() -> Sr25519Pair {
 
 /// Generate the substrate test pair corresponding to Alice in ECDSA
 pub fn alice_ecdsa() -> ECDSAPair {
-    todo!()
+    // todo!()
+    ECDSAPair::from_string("//Alice", None).unwrap()
 }
 
 /// Generate the sr25519 keypair corresponding to the const bip39 phrase using the password
 /// 'hunter2'
 pub fn generate_with_password() -> Sr25519Pair {
-    todo!()
+    // todo!()
+    Sr25519Pair::from_string(BIP39_STR, Some("hunter2")).unwrap()
 }
 
 // Now that we have some familiarity with seeds, phrases, and password derivation, let's look a
